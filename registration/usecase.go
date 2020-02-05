@@ -9,4 +9,6 @@ type Usecase interface {
 	CheckIn(classID, employeeID int) (string, error)
 	GetStudentList(classID int) ([]models.Student, error)
 	DeleteClass(classID int) error
+	UpdateStudent(classID int, student models.Student) error
+	DeleteStudent(classID, employeeID int) error
 }

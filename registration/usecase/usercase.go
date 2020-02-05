@@ -3,9 +3,9 @@ package usecase
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"registration/models"
 	"registration/registration"
+	"sort"
 	"strconv"
 
 	"github.com/gomodule/redigo/redis"
@@ -18,6 +18,12 @@ type redisUsecase struct {
 func NewRedisUsecase(Conn *redis.Pool) registration.Usecase {
 	return &redisUsecase{Conn}
 }
+
+type byDepartment []models.Student
+
+func (a byDepartment) Len() int           { return len(a) }
+func (a byDepartment) Less(i, j int) bool { return a[i].Department < a[j].Department }
+func (a byDepartment) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 func (r *redisUsecase) NewClass(class *models.Class) (err error) {
 	// 取得流水號 usecase ok
@@ -105,7 +111,6 @@ func (r *redisUsecase) CheckIn(classID, employeeID int) (msg string, err error) 
 	redisKey := "studentList:" + sClassID
 	reply, err := redis.String(conn.Do("HGET", redisKey, employeeID))
 	if err != nil {
-		log.Println(err)
 		return "沒有這個員工編號", nil
 	}
 
@@ -128,7 +133,7 @@ func (r *redisUsecase) CheckIn(classID, employeeID int) (msg string, err error) 
 	// 存回去
 	_, err = conn.Do("HSET", redisKey, sEmployeeID, string(studentJson))
 
-	return "報到成功", err
+	return student.Name + "報到成功，" + student.Group, err
 }
 
 func (r *redisUsecase) GetStudentList(classID int) (studentList []models.Student, err error) {
@@ -150,6 +155,8 @@ func (r *redisUsecase) GetStudentList(classID int) (studentList []models.Student
 		_ = json.Unmarshal([]byte(value), &student)
 		studentList = append(studentList, student)
 	}
+
+	sort.Sort(byDepartment(studentList))
 
 	return
 }
@@ -173,6 +180,42 @@ func (r *redisUsecase) DeleteClass(classID int) (err error) {
 	_, err = redis.Int(conn.Do("DEL", redisKey))
 	if err != nil {
 		return
+	}
+
+	return
+}
+
+func (r *redisUsecase) UpdateStudent(classID int, student models.Student) (err error) {
+	conn := r.Conn.Get()
+	defer conn.Close()
+
+	sClassID := strconv.Itoa(classID)
+	redisKey := "studentList:" + sClassID
+
+	studentJson, err := json.Marshal(student)
+	if err != nil {
+		return
+	}
+
+	_, err = conn.Do("HSET", redisKey, student.EmployeeID, string(studentJson))
+
+	return
+}
+
+func (r *redisUsecase) DeleteStudent(classID, studentID int) (err error) {
+	// 從redis classList裡 取出
+	conn := r.Conn.Get()
+	defer conn.Close()
+
+	sClassID := strconv.Itoa(classID)
+	redisKey := "studentList:" + sClassID
+
+	reply, err := redis.Int(conn.Do("HDEL", redisKey, studentID))
+	if err != nil {
+		return
+	}
+	if reply != 1 {
+		return errors.New("studentID錯誤")
 	}
 
 	return

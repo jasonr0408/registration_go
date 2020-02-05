@@ -22,6 +22,9 @@ func NewHandler(r *gin.Engine, a registration.Usecase) {
 	r.PUT("/student/check-in", handler.CheckIn)
 	r.GET("/class/status", handler.GetClassStatus)
 	r.DELETE("/class", handler.DeleteClass)
+	r.POST("/student", handler.UpdateStudent)
+	r.PUT("/student", handler.UpdateStudent)
+	r.DELETE("/student", handler.DeleteStudent)
 }
 
 func returnOk(c *gin.Context, data interface{}) {
@@ -154,6 +157,55 @@ func (h *Handler) DeleteClass(c *gin.Context) {
 	classID, _ := strconv.Atoi(sClassID)
 	// return
 	err := h.Usecase.DeleteClass(classID)
+	if err != nil {
+		returnError(c, err.Error())
+	} else {
+		returnOk(c, "ok")
+	}
+}
+func (h *Handler) UpdateStudent(c *gin.Context) {
+	// 取得get的 classID studentID
+	sClassID := c.Query("classID")
+	if sClassID == "" {
+		returnError(c, "請回到首頁")
+		return
+	}
+	classID, _ := strconv.Atoi(sClassID)
+
+	// 取post form ok
+	var student models.Student
+	err := c.BindJSON(&student)
+	if err != nil {
+		returnError(c, err.Error())
+		return
+	}
+
+	// return
+	err = h.Usecase.UpdateStudent(classID, student)
+	if err != nil {
+		returnError(c, err.Error())
+	} else {
+		returnOk(c, "ok")
+	}
+}
+
+func (h *Handler) DeleteStudent(c *gin.Context) {
+	// 取得get的 classID studentID
+	sClassID := c.Query("classID")
+	if sClassID == "" {
+		returnError(c, "請回到首頁")
+		return
+	}
+	classID, _ := strconv.Atoi(sClassID)
+
+	sEmployeeID := c.Query("employeeID")
+	if sEmployeeID == "" {
+		returnError(c, "請回到首頁")
+		return
+	}
+	employeeID, _ := strconv.Atoi(sEmployeeID)
+	// return
+	err := h.Usecase.DeleteStudent(classID, employeeID)
 	if err != nil {
 		returnError(c, err.Error())
 	} else {

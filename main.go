@@ -24,16 +24,7 @@ var db = make(map[string]string)
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 	// cors
-	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://127.0.0.1:9528",
-			"https://127.0.0.1:9528",
-			"http://localhost:9528",
-			"https://localhost:9528",
-			"http://192.168.43.16:9528",
-			"https://192.168.43.16:9528",
-		},
-	}))
+	r.Use(cors.Default())
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "pong")
@@ -57,14 +48,10 @@ func newRedis() *redis.Pool {
 		IdleTimeout: 10 * time.Second,
 
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", "127.0.0.1:6378")
+			c, err := redis.Dial("tcp", "redis:6379")
 			if err != nil {
 				return nil, err
 			}
-			// _, err = c.Do("AUTH", "123")
-			// if err != nil {
-			// 	return nil, err
-			// }
 
 			c.Do("SELECT", 4)
 
